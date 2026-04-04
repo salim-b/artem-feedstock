@@ -49,10 +49,8 @@ requirements:
 
 tests:
   - script:
-      - if: build_platform == host_platform
-        then:
-          - artem --help
-          - artem --version
+      - artem --help
+      - artem --version
   - package_contents:
       bin:
         - artem
