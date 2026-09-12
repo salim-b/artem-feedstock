@@ -13,39 +13,30 @@ build:
   number: 1
   script:
     env:
-      CARGO_PROFILE_RELEASE_STRIP: symbols
       CARGO_PROFILE_RELEASE_LTO: fat
+      CARGO_PROFILE_RELEASE_STRIP: symbols
+    interpreter: nu
     content:
-      - if: unix
-        then:
-          - cargo auditable install --path=. --root="$PREFIX" --no-track --locked --bins
-          # copy shell completion files and man page
-          - mkdir -p "$PREFIX"/share/bash-completion/completions "$PREFIX"/share/fish/vendor_completions.d "$PREFIX"/share/zsh/site-functions "$PREFIX"/share/man/man1
-          - cp target/*/release/build/artem-*/out/artem.bash "$PREFIX"/share/bash-completion/completions/artem
-          - cp target/*/release/build/artem-*/out/artem.fish "$PREFIX"/share/fish/vendor_completions.d/artem.fish
-          - cp target/*/release/build/artem-*/out/_artem     "$PREFIX"/share/zsh/site-functions/_artem
-          - cp target/*/release/build/artem-*/out/artem.1    "$PREFIX"/share/man/man1/artem.1
-      - if: win
-        then:
-          - cargo auditable install --path=. --root="%LIBRARY_PREFIX%" --no-track --locked --bins
-          # copy shell completion files and man page
-          - mkdir "%LIBRARY_PREFIX%"\share\bash-completion\completions
-          - mkdir "%LIBRARY_PREFIX%"\share\fish\vendor_completions.d
-          - mkdir "%LIBRARY_PREFIX%"\share\zsh\site-functions
-          - mkdir "%LIBRARY_PREFIX%"\share\man\man1
-          - powershell -Command "Copy-Item -Path 'target\*\release\build\artem-*\out\artem.bash' -Destination '%LIBRARY_PREFIX%\share\bash-completion\completions\artem'"
-          - powershell -Command "Copy-Item -Path 'target\*\release\build\artem-*\out\artem.fish' -Destination '%LIBRARY_PREFIX%\share\fish\vendor_completions.d\artem.fish'"
-          - powershell -Command "Copy-Item -Path 'target\*\release\build\artem-*\out\_artem'     -Destination '%LIBRARY_PREFIX%\share\zsh\site-functions\_artem'"
-          - powershell -Command "Copy-Item -Path 'target\*\release\build\artem-*\out\artem.1'    -Destination '%LIBRARY_PREFIX%\share\man\man1\artem.1'"
+      - let prefix = $env.LIBRARY_PREFIX? | default $env.PREFIX
+      # build main app and generate license data
+      - cargo auditable install --path=. --root=($prefix) --no-track --locked --bins
       - cargo-bundle-licenses --format=yaml --output=./THIRDPARTY.yml
+      # copy shell completion files and man page
+      - mkdir ($prefix)/share/bash-completion/completions ($prefix)/share/fish/vendor_completions.d ($prefix)/share/zsh/site-functions ($prefix)/share/man/man1
+      - let out_dir = glob target/*/release/build/artem-*/out | first
+      - cp ($out_dir)/artem.bash ($prefix)/share/bash-completion/completions/artem
+      - cp ($out_dir)/artem.fish ($prefix)/share/fish/vendor_completions.d/artem.fish
+      - cp ($out_dir)/_artem     ($prefix)/share/zsh/site-functions/_artem
+      - cp ($out_dir)/artem.1    ($prefix)/share/man/man1/artem.1
 
 requirements:
   build:
     - ${{ stdlib('c') }}
     - ${{ compiler('c') }}
     - ${{ compiler('rust') }}
-    - cargo-bundle-licenses
     - cargo-auditable
+    - cargo-bundle-licenses
+    - nushell
 
 tests:
   - script:
